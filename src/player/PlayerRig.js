@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Hand } from './Hand.js';
 
 const EYE_HEIGHT = 1.6;
 
@@ -7,7 +8,8 @@ const EYE_HEIGHT = 1.6;
 // sickness). On desktop you drag to look around; in VR the headset drives the
 // camera and the two controllers are children of the rig.
 export class PlayerRig {
-  constructor(engine) {
+  constructor(engine, grab) {
+    this.grab = grab; // GrabSystem: the hands register with it
     this.engine = engine;
     this.rig = new THREE.Group();
     this.rig.name = 'player-rig';
@@ -83,24 +85,46 @@ export class PlayerRig {
 
   makeController(index) {
     const xr = this.engine.renderer.xr;
+
+    // target ray: only used for pointing at menus (trigger), so keep it short and faint
     const controller = xr.getController(index);
     const ray = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]),
-      new THREE.LineBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.6 }),
+      new THREE.LineBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.35 }),
     );
-    ray.scale.z = 2;
+    ray.scale.z = 0.6;
     ray.name = 'ray';
+    ray.userData.noRaycast = true;
     controller.add(ray);
+    controller.addEventListener('select', () => this.engine.bus?.emit('ui/select', { controller }));
     this.rig.add(controller);
 
-    // simple low-poly hand stand-in until we have proper hands/tongs
+    // grip space: the hand lives here. Handedness is only known once connected.
     const grip = xr.getControllerGrip(index);
-    const hand = new THREE.Mesh(
-      new THREE.BoxGeometry(0.04, 0.03, 0.1),
-      new THREE.MeshStandardMaterial({ color: 0xf2e6d4, flatShading: true }),
-    );
-    grip.add(hand);
     this.rig.add(grip);
+    let slot = null;
+    grip.addEventListener('connected', (e) => {
+      const side = e.data.handedness === 'left' ? 'left' : 'right';
+      if (!slot || slot.side !== side) {
+        if (slot) {
+          slot.hand.root.removeFromParent();
+          this.grab.hands.splice(this.grab.hands.indexOf(slot), 1);
+        }
+        const hand = new Hand(side);
+        grip.add(hand.root);
+        slot = this.grab.addHand(side, hand, grip);
+      }
+      slot.inputSource = e.data;
+      slot.hand.root.visible = true;
+    });
+    grip.addEventListener('disconnected', () => {
+      if (!slot) return;
+      this.grab.squeezeEnd(slot);
+      slot.inputSource = null;
+      slot.hand.root.visible = false;
+    });
+    grip.addEventListener('squeezestart', () => slot && this.grab.squeezeStart(slot));
+    grip.addEventListener('squeezeend', () => slot && this.grab.squeezeEnd(slot));
 
     return controller;
   }

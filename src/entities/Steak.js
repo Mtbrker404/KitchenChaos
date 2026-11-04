@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Entity } from '../core/Entity.js';
+import { Item } from './Item.js';
 
 // Doneness colour stops: 0 = raw, 1 = cooked, 2 = burnt.
 const RAW = new THREE.Color(0xb8323f);
@@ -11,11 +11,16 @@ export function donenessColor(level, target = new THREE.Color()) {
   return l <= 1 ? target.copy(RAW).lerp(COOKED, l) : target.copy(COOKED).lerp(BURNT, l - 1);
 }
 
-// Low-poly steak with two independently cooking sides.
-// state: { top: 0..2, bottom: 0..2 }  (doneness per side; filled in by the heat timer later)
-export class Steak extends Entity {
-  constructor(id, { top = 0, bottom = 0 } = {}) {
+const _up = new THREE.Vector3();
+const _e = new THREE.Euler();
+
+// Low-poly steak with two independently cooking sides. Origin = centre of the steak.
+// Extra state: { sideA: 0..2, sideB: 0..2 } doneness per side (driven by the heat timer later).
+// sideA is the side facing up when the steak isn't flipped.
+export class Steak extends Item {
+  constructor(id) {
     super(id, 'steak');
+    Object.assign(this.state, { sideA: 0, sideB: 0 });
 
     const geo = new THREE.CylinderGeometry(0.07, 0.07, 0.022, 9, 1);
     // squash into an irregular steak outline; jitter by angle so cap and side rims stay welded
@@ -32,29 +37,42 @@ export class Steak extends Entity {
     }
     geo.computeVertexNormals();
 
-    // Cylinder material groups: 0 = side, 1 = top cap, 2 = bottom cap
+    // Cylinder material groups: 0 = side, 1 = top cap (side A), 2 = bottom cap (side B)
     this.sideMat = new THREE.MeshStandardMaterial({ color: 0xd98a80, roughness: 0.7, flatShading: true });
-    this.topMat = new THREE.MeshStandardMaterial({ roughness: 0.75, flatShading: true });
-    this.bottomMat = new THREE.MeshStandardMaterial({ roughness: 0.75, flatShading: true });
-    const mesh = new THREE.Mesh(geo, [this.sideMat, this.topMat, this.bottomMat]);
-    mesh.position.y = 0.011;
+    this.aMat = new THREE.MeshStandardMaterial({ roughness: 0.75, flatShading: true });
+    this.bMat = new THREE.MeshStandardMaterial({ roughness: 0.75, flatShading: true });
+    const mesh = new THREE.Mesh(geo, [this.sideMat, this.aMat, this.bMat]);
     mesh.castShadow = mesh.receiveShadow = true;
     this.object3d.add(mesh);
 
-    // strip of fat along one edge
     const fat = new THREE.Mesh(
       new THREE.BoxGeometry(0.1, 0.018, 0.012),
       new THREE.MeshStandardMaterial({ color: 0xf1ddc9, roughness: 0.6, flatShading: true }),
     );
-    fat.position.set(0.0, 0.011, -0.072);
+    fat.position.set(0.0, 0, -0.072);
     fat.rotation.y = 0.15;
+    fat.castShadow = true;
     this.object3d.add(fat);
-
-    this.setState({ top, bottom });
   }
 
-  onStateChanged() {
-    donenessColor(this.state.top, this.topMat.color);
-    donenessColor(this.state.bottom, this.bottomMat.color);
+  /** Lands flat, on whichever side is closer to facing down: this is how flipping works. */
+  restQuaternion(worldQuat) {
+    _up.set(0, 1, 0).applyQuaternion(worldQuat);
+    _e.setFromQuaternion(worldQuat, 'YXZ');
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, _e.y, 0, 'YXZ'));
+    if (_up.y < 0) q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
+    return q;
+  }
+
+  /** Which side is touching the pan: 'A' or 'B'. Used by the cooking logic next. */
+  get downSide() {
+    _up.set(0, 1, 0).applyQuaternion(new THREE.Quaternion().fromArray(this.state.quat));
+    return _up.y >= 0 ? 'B' : 'A';
+  }
+
+  onStateChanged(patch) {
+    super.onStateChanged(patch);
+    donenessColor(this.state.sideA, this.aMat.color);
+    donenessColor(this.state.sideB, this.bMat.color);
   }
 }

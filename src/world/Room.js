@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { COLORS, M, mat } from './materials.js';
-import { box, cyl } from './helpers.js';
+import { COLORS, M } from './materials.js';
+import { box } from './helpers.js';
 
 export const ROOM = { size: 9, height: 3.2 };
 
@@ -57,34 +57,16 @@ export function buildRoom() {
     box(w, 0.12, d, M.trim(), x, 0.06, z, g);
     box(w, 0.25, d, M.trim(), x, height - 0.125, z, g);
   }
-  // ceiling + beams
+  // ceiling
   box(size, 0.1, size, M.ceiling(), 0, height + 0.05, 0, g);
-  for (const x of [-3, -1, 1, 3]) box(0.18, 0.2, size, M.woodDark(), x, height - 0.1, 0, g);
 
-  // pendant lamps
-  const lampPositions = [
+  // Positions for the warm point lights (lamp models removed for now).
+  const lamps = [
     [-1.3, -1.3],
     [1.3, -1.3],
     [-1.3, 1.4],
     [1.3, 1.4],
-    [-3.0, 0],
-    [3.0, 0],
-  ];
-  const shadeMat = mat(0x1d1a17, { side: THREE.DoubleSide });
-  const bulbMat = mat(0xfff0c8, { emissive: 0xffd28a, emissiveIntensity: 3 });
-  const lamps = [];
-  for (const [x, z] of lampPositions) {
-    const drop = 0.75;
-    const y = height - drop;
-    cyl(0.004, 0.004, drop, 4, M.black(), x, height - drop / 2, z, g);
-    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.2, 0.16, 8, 1, true), shadeMat);
-    shade.position.set(x, y - 0.08, z);
-    g.add(shade);
-    const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045, 0), bulbMat);
-    bulb.position.set(x, y - 0.14, z);
-    g.add(bulb);
-    lamps.push(new THREE.Vector3(x, y - 0.16, z));
-  }
+  ].map(([x, z]) => new THREE.Vector3(x, height - 0.9, z));
 
   return { floor, group: g, lamps };
 }

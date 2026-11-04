@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { buildRoom, ROOM } from './Room.js';
-import { buildBackground } from './Background.js';
 import { buildLighting } from './Lighting.js';
 import { buildStove } from './stations/Stove.js';
 import { buildSink } from './stations/Sink.js';
@@ -10,9 +9,17 @@ import { faceCenter, mergeStatic } from './helpers.js';
 import { GRATE_TOP } from '../entities/Burner.js';
 import { Pan, PAN_FLOOR } from '../entities/Pan.js';
 import { Steak } from '../entities/Steak.js';
+import { Tongs } from '../entities/Tongs.js';
 
 // How far each station's centre is from the player (who stands at the origin).
 const REACH = 0.85;
+const STEAK_HALF_THICKNESS = 0.011;
+
+/** Put an item at a starting pose (world, or local to the entity it rests on). */
+function placeInitial(item, { on = null, pos, quat = new THREE.Quaternion() }) {
+  item.setState({ held: null, on, pos: pos.toArray(), quat: quat.toArray() });
+  item.snap();
+}
 
 /**
  * Builds the whole kitchen into the scene and registers its entities in `game`.
@@ -26,7 +33,6 @@ export function buildKitchen(scene, game) {
   const room = buildRoom();
   scene.add(room.floor);
   root.add(room.group);
-  root.add(buildBackground());
 
   const stove = buildStove(game, { ceilingY });
   faceCenter(stove.group, 0, -REACH);
@@ -40,25 +46,37 @@ export function buildKitchen(scene, game) {
   faceCenter(sink.group, REACH + 0.05, 0);
   root.add(sink.group);
 
-  const serving = buildServingCounter(game, { ceilingY });
+  const serving = buildServingCounter({ ceilingY });
   faceCenter(serving.group, 0, REACH + 0.05);
   root.add(serving.group);
 
   // one draw call per material for everything static; entities stay separate
-  const merged = mergeStatic(root);
-  scene.add(merged);
+  scene.add(mergeStatic(root));
 
-  // pan + steak on the front-left burner
+  // pan on the front-left burner, handle towards the player's right
   const burner = game.get('burner.0');
-  const pan = game.add(new Pan('pan.0', { on: burner.id }));
-  pan.object3d.position.copy(burner.object3d.position).add(new THREE.Vector3(0, GRATE_TOP, 0));
-  pan.object3d.rotation.y = -0.5; // handle towards the player's right
-  scene.add(pan.object3d);
+  const pan = game.add(new Pan('pan.0'));
+  placeInitial(pan, {
+    pos: burner.object3d.position.clone().add(new THREE.Vector3(0, GRATE_TOP, 0)),
+    quat: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -0.5),
+  });
 
+  // steak inside the pan (its pose is local to the pan)
   const steak = game.add(new Steak('steak.0'));
-  steak.object3d.position.copy(pan.object3d.position).add(new THREE.Vector3(0, PAN_FLOOR, 0));
-  steak.object3d.rotation.y = 0.3;
-  scene.add(steak.object3d);
+  placeInitial(steak, {
+    on: pan.id,
+    pos: new THREE.Vector3(0, PAN_FLOOR + STEAK_HALF_THICKNESS, 0),
+    quat: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.8),
+  });
+
+  // tongs hanging from the rail behind the player
+  const tongs = game.add(new Tongs('tongs.0'));
+  const hook = serving.tongsHook;
+  placeInitial(tongs, {
+    pos: hook.position.clone(),
+    quat: hook.quaternion.clone(),
+  });
+  hook.removeFromParent();
 
   buildLighting(scene, room.lamps);
 

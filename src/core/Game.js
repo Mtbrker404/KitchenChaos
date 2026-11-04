@@ -4,8 +4,9 @@
 // JSON, so in Ring 5 the phone can send the exact same action over the network
 // and the headset (the "host") applies it. Nothing else should mutate state.
 export class Game {
-  constructor(bus) {
+  constructor(bus, scene) {
     this.bus = bus;
+    this.scene = scene;
     this.entities = new Map();
     this.handlers = new Map();
   }
@@ -13,6 +14,7 @@ export class Game {
   add(entity) {
     if (this.entities.has(entity.id)) throw new Error(`Duplicate entity id: ${entity.id}`);
     this.entities.set(entity.id, entity);
+    entity.game = this;
     return entity;
   }
 
@@ -34,12 +36,6 @@ export class Game {
     }
     handler(action, this);
     this.bus.emit('action', { action, source });
-  }
-
-  /** A player pointed at an entity and clicked / pulled the trigger. */
-  interact(id, source = 'local') {
-    const action = this.get(id)?.interact();
-    if (action) this.dispatch(action, source);
   }
 
   update(dt, time) {

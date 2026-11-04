@@ -1,10 +1,13 @@
-import { Entity } from '../core/Entity.js';
+import * as THREE from 'three';
+import { Item } from './Item.js';
 import { M } from '../world/materials.js';
 import { box, cyl } from '../world/helpers.js';
 
-// Kitchen tongs, length along local -Y (hinge at the origin, so they hang from a hook).
-// state: {} for now; grabbing comes next in Ring 1.
-export class Tongs extends Entity {
+const _d = new THREE.Vector3();
+
+// Kitchen tongs, length along local -Y (hinge ring at the origin, so they hang from a hook).
+// Using them to pick up the steak comes in a later step.
+export class Tongs extends Item {
   constructor(id) {
     super(id, 'tongs');
     const g = this.object3d;
@@ -17,5 +20,12 @@ export class Tongs extends Entity {
     }
     const ring = cyl(0.014, 0.014, 0.01, 8, M.steelDark(), 0, 0.005, 0, g);
     ring.rotation.x = Math.PI / 2;
+  }
+
+  /** Lie flat on the counter, pointing the way they were held. */
+  restQuaternion(worldQuat) {
+    _d.set(0, -1, 0).applyQuaternion(worldQuat);
+    const yaw = Math.atan2(_d.x, _d.z);
+    return new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, yaw, 0, 'YXZ'));
   }
 }

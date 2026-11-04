@@ -21,11 +21,15 @@ const flameTipMat = new THREE.MeshBasicMaterial({
 
 /** Grate height above the stove top: where pans sit. */
 export const GRATE_TOP = 0.05;
+/** Below this the gas is off. */
+export const HEAT_ON_THRESHOLD = 0.05;
+/** Knob rotation (radians) from off to full heat: a comfortable wrist twist. */
+export const KNOB_RANGE = Math.PI * 0.6;
 
 // Gas burner. Origin = centre of the burner on the stove-top surface.
-// state: { on: boolean }
+// state: { heat: 0..1 }  (0 = off). Knob angle = heat * KNOB_RANGE.
 export class Burner extends Entity {
-  constructor(id, { on = true } = {}) {
+  constructor(id, { heat = 0.6 } = {}) {
     super(id, 'burner');
     // Build into a temp group, then merge to a few meshes (draw calls matter on Pico).
     const g = new THREE.Group();
@@ -69,6 +73,7 @@ export class Burner extends Entity {
       const merged = mergeStatic(ring);
       merged.traverse((o) => (o.castShadow = o.receiveShadow = false));
       merged.userData.phase = Math.random() * 10;
+      merged.userData.noRaycast = true;
       this.object3d.add(merged);
       return merged;
     });
@@ -76,45 +81,57 @@ export class Burner extends Entity {
     // Fake glow disc instead of a real light: toggling real lights forces a
     // shader recompile (stutter) and every light costs fill-rate on Pico.
     this.glow = new THREE.Mesh(new THREE.CircleGeometry(0.075, 12), flameTipMat);
+    this.glow.userData.noRaycast = true;
     this.glow.rotation.x = -Math.PI / 2;
     this.glow.position.y = 0.023;
     this.object3d.add(this.glow);
 
     this.knob = null;
-    this.setState({ on });
+    this.grabKind = 'knob';
+    this.state = { heat };
+    this.onStateChanged();
   }
 
-  /** The knob lives on the stove front, but clicking it controls this burner. */
+  get on() {
+    return this.state.heat >= HEAT_ON_THRESHOLD;
+  }
+
+  /** The knob lives on the stove front, but grabbing it controls this burner. */
   attachKnob(knob) {
     this.knob = this.tag(knob);
     knob.traverse((o) => this.tag(o));
     this.onStateChanged();
   }
 
+  grabTarget() {
+    return this.knob;
+  }
+
   onStateChanged() {
-    for (const f of this.flames) f.visible = this.state.on;
-    this.glow.visible = this.state.on;
-    if (this.knob) this.knob.rotation.z = this.state.on ? -Math.PI / 2 : 0;
+    const on = this.on;
+    for (const f of this.flames) f.visible = on;
+    this.glow.visible = on;
+    if (this.knob) this.knob.rotation.z = -this.state.heat * KNOB_RANGE;
   }
 
   update(_dt, time) {
-    if (!this.state.on) return;
+    if (!this.on) return;
+    // flame height follows the heat; keep the flame bases on the burner ring (y = 0.03)
+    const s = 0.4 + 0.9 * this.state.heat;
     for (const f of this.flames) {
       const p = f.userData.phase;
-      f.scale.y = 0.8 + 0.25 * Math.sin(time * 23 + p) + 0.15 * Math.sin(time * 41 + p * 2);
+      const sy = s * (0.8 + 0.25 * Math.sin(time * 23 + p) + 0.15 * Math.sin(time * 41 + p * 2));
+      f.scale.y = sy;
+      f.position.y = 0.03 * (1 - sy);
     }
-  }
-
-  interact() {
-    return { type: 'burner/setOn', id: this.id, on: !this.state.on };
   }
 }
 
-/** A stove knob, front facing +Z. Pointer at 12 o'clock = off. */
+/** A stove knob, front facing +Z. Rotation 0 (pointer at 12 o'clock) = off. */
 export function makeKnob() {
   const knob = new THREE.Group();
-  const dial = cyl(0.024, 0.026, 0.025, 10, M.black(), 0, 0, 0, knob);
+  const dial = cyl(0.03, 0.032, 0.03, 10, M.black(), 0, 0, 0, knob);
   dial.rotation.x = Math.PI / 2;
-  box(0.008, 0.03, 0.012, M.steel(), 0, 0.006, 0.016, knob);
+  box(0.012, 0.05, 0.022, M.steel(), 0, 0.004, 0.024, knob); // grip fin / pointer
   return knob;
 }

@@ -12,6 +12,9 @@ export class Entity {
     this.id = id;
     this.type = type;
     this.state = {};
+    this.game = null; // set by Game.add()
+    /** null | 'item' (picked up, follows the hand) | 'knob' (grab and twist) */
+    this.grabKind = null;
     this.object3d = new THREE.Group();
     this.object3d.name = id;
     this.object3d.userData.entityId = id;
@@ -34,9 +37,9 @@ export class Entity {
   /** Per-frame visual update (animation, flicker). Must not change game state. */
   update(_dt, _time) {}
 
-  /** What happens when a player points at this and clicks/triggers. Returns an action or null. */
-  interact() {
-    return null;
+  /** The part of the entity a hand has to be near to grab it. */
+  grabTarget() {
+    return this.object3d;
   }
 
   /** Lets child meshes (e.g. a knob outside the group) count as part of this entity. */
