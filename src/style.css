@@ -1,0 +1,38 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #2b1a0e;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+#app,
+#app canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(40, 22, 10, 0.65);
+  color: #ffe9c7;
+  font-size: 13px;
+  pointer-events: none;
+  user-select: none;
+}
+
+#hud kbd {
+  padding: 0 4px;
+  border: 1px solid #ffe9c7;
+  border-radius: 3px;
+  font-size: 11px;
+}
