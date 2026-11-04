@@ -23,8 +23,8 @@ engine.bus = bus;
 const game = new Game(bus, engine.scene);
 registerActions(game);
 
-buildKitchen(engine.scene, game);
-const grab = new GrabSystem({ engine, game });
+const kitchen = buildKitchen(engine.scene, game);
+const grab = new GrabSystem({ engine, game, colliders: kitchen.colliders });
 const player = new PlayerRig(engine, grab);
 
 // FPS meter (target: stable 72 fps on Pico)

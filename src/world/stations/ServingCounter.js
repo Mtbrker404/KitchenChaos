@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { M } from '../materials.js';
-import { box, cyl, cabinet } from '../helpers.js';
+import { box, cyl, cabinet, collider } from '../helpers.js';
 
 const W = 1.4;
 const D = 0.65;
@@ -10,7 +10,7 @@ const SHELF_Z = -0.12;
 
 /**
  * Serving counter behind the player, with a hanging shelf above it.
- * Orders (Ring 2) will clip onto the ticket rail; tools hang underneath.
+ * Orders (Ring 2) will clip onto the ticket rail; the spatula hangs underneath.
  * Front faces local +Z.
  */
 export function buildServingCounter({ ceilingY }) {
@@ -32,24 +32,22 @@ export function buildServingCounter({ ceilingY }) {
   // ticket rail along the shelf front (orders go here in Ring 2)
   box(1.2, 0.04, 0.012, M.steel(), 0, SHELF_Y - 0.01, SHELF_Z + 0.156, g);
 
-  // tool rail under the shelf (tongs hang here, see Kitchen.js)
+  // tool rail under the shelf
   const railY = SHELF_Y - 0.09;
   const rail = cyl(0.008, 0.008, 1.1, 6, M.steelDark(), 0, railY, SHELF_Z + 0.05, g);
   rail.rotation.z = Math.PI / 2;
   for (const x of [-0.5, 0.5]) box(0.01, 0.08, 0.01, M.steelDark(), x, railY + 0.04, SHELF_Z + 0.05, g);
 
-  // spatula
-  const spat = new THREE.Group();
-  spat.position.set(0.0, railY - 0.01, SHELF_Z + 0.05);
-  cyl(0.008, 0.008, 0.2, 6, M.black(), 0, -0.1, 0, spat);
-  box(0.08, 0.1, 0.004, M.steel(), 0, -0.25, 0, spat);
-  g.add(spat);
+  // where the spatula hangs, in this station's local space
+  const spatulaHook = new THREE.Object3D();
+  spatulaHook.position.set(-0.15, railY - 0.005, SHELF_Z + 0.05);
+  spatulaHook.userData.dynamic = true; // keep it out of the merge so we can read its world pose
+  g.add(spatulaHook);
 
-  // where the tongs hang, in this station's local space
-  const tongsHook = new THREE.Object3D();
-  tongsHook.position.set(-0.25, railY - 0.01, SHELF_Z + 0.05);
-  tongsHook.userData.dynamic = true; // keep it out of the merge so we can read its world pose
-  g.add(tongsHook);
+  // solid parts
+  collider(W + 0.03, H, D + 0.02, 0, H / 2, 0, g);
+  collider(0.5, 0.03, 0.38, 0.3, H + 0.015, 0.02, g); // tray + plate
+  collider(1.2, 0.06, 0.32, 0, SHELF_Y + 0.005, SHELF_Z, g); // shelf + ticket rail
 
-  return { group: g, tongsHook, topY: H };
+  return { group: g, spatulaHook, topY: H };
 }

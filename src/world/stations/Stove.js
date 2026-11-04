@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { M } from '../materials.js';
-import { box, cyl } from '../helpers.js';
+import { box, cyl, collider } from '../helpers.js';
 import { Burner, makeKnob } from '../../entities/Burner.js';
 
 const W = 1.0;
@@ -33,6 +33,11 @@ export function buildStove(game, { ceilingY }) {
   box(W, 0.12, 0.03, M.steel(), 0, H - 0.1, D / 2 + 0.015, g); // control strip
   box(W + 0.02, 0.04, D + 0.02, M.stoveTop(), 0, H - 0.02, 0, g); // cooktop
   box(W, 0.35, 0.03, M.steel(), 0, H + 0.175, -D / 2 + 0.015, g); // backsplash
+
+  // solid parts (grates add their own colliders, see Burner)
+  collider(W + 0.02, H, D + 0.02, 0, H / 2, 0, g);
+  collider(W, 0.35, 0.03, 0, H + 0.175, -D / 2 + 0.015, g);
+  collider(1.04, 0.5, 0.82, 0, 1.78 + 0.2, -0.06, g); // hood
 
   // burners (entities)
   const burners = BURNERS.map(([x, z], i) => {

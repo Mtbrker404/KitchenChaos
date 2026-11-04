@@ -18,6 +18,31 @@ export function cyl(rTop, rBottom, h, segments, material, x = 0, y = 0, z = 0, p
   return finish(new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBottom, h, segments), material), x, y, z, parent);
 }
 
+/**
+ * Invisible solid box (centre x,y,z / size w,h,d in the parent's space).
+ * Held items get pushed out of these. Collected by collectColliders().
+ */
+export function collider(w, h, d, x, y, z, parent) {
+  const o = new THREE.Object3D();
+  o.position.set(x, y, z);
+  o.userData.collider = new THREE.Vector3(w, h, d);
+  parent?.add(o);
+  return o;
+}
+
+/** World-space Box3 for every collider() under root. Call before mergeStatic(). */
+export function collectColliders(root) {
+  root.updateMatrixWorld(true);
+  const boxes = [];
+  root.traverse((o) => {
+    const s = o.userData.collider;
+    if (!s) return;
+    const b = new THREE.Box3(new THREE.Vector3(-s.x / 2, -s.y / 2, -s.z / 2), new THREE.Vector3(s.x / 2, s.y / 2, s.z / 2));
+    boxes.push(b.applyMatrix4(o.matrixWorld));
+  });
+  return boxes;
+}
+
 /** Position a station so its local +Z (its front) faces the player at the origin. */
 export function faceCenter(obj, x, z) {
   obj.position.set(x, 0, z);

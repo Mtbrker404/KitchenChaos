@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { M } from '../materials.js';
-import { box } from '../helpers.js';
+import { box, collider } from '../helpers.js';
 
 const W = 1.2;
 const D = 0.65;
@@ -22,6 +22,12 @@ export function buildPrepCounter() {
 
   // chopping board
   box(0.42, 0.025, 0.3, M.board(), -0.15, H + 0.0125, 0.03, g);
+
+  // solid parts: table top (+ front lip), under-shelf, upstand, board
+  collider(W, 0.1, D, 0, H - 0.05, 0, g);
+  collider(W, 0.22, D, 0, 0.11, 0, g);
+  collider(W, 0.35, 0.03, 0, H + 0.175, -D / 2 + 0.015, g);
+  collider(0.42, 0.025, 0.3, -0.15, H + 0.0125, 0.03, g);
 
   return { group: g, topY: H };
 }

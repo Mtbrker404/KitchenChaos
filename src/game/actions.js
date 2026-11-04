@@ -14,9 +14,9 @@ export function registerActions(game) {
     g.get(id)?.setState({ held: hand });
   });
 
-  // { type: 'item/place', id, on: entityId | null, pos: [x,y,z], quat: [x,y,z,w] }
-  // pos/quat are local to `on` (or world when on = null).
-  game.handle('item/place', ({ id, on, pos, quat }, g) => {
-    g.get(id)?.setState({ held: null, on, pos, quat });
+  // { type: 'item/place', id, on: entityId | null, pos: [x,y,z], quat: [x,y,z,w], toss?: m/s }
+  // pos/quat are local to `on` (or world when on = null). toss > 0 = flicked up (spatula flip).
+  game.handle('item/place', ({ id, on, pos, quat, toss = 0 }, g) => {
+    g.get(id)?.setState({ held: null, on, pos, quat, toss });
   });
 }

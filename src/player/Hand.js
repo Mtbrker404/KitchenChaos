@@ -64,12 +64,12 @@ export class Hand {
     // thumb: sits on top, points forward and towards the palm side
     this.thumb = new THREE.Group();
     this.thumb.position.set(-0.012, 0.03, -0.005);
-    this.thumb.rotation.set(0.5, -0.5, 0);
+    this.thumb.rotation.set(0.5, 0.25, 0);
     hand.add(this.thumb);
     seg(0.03, 0.019, this.thumb);
     this.thumbTip = new THREE.Group();
     this.thumbTip.position.z = -0.03;
-    this.thumbTip.rotation.y = -0.2;
+    this.thumbTip.rotation.y = 0.15;
     this.thumb.add(this.thumbTip);
     seg(0.026, 0.017, this.thumbTip);
 
@@ -79,22 +79,30 @@ export class Hand {
     hand.add(this.grabPoint);
 
     this.grip = 0; // 0 = open, 1 = fist (animated)
-    this.index = 0;
+    this.point = 0; // 0 = no, 1 = pointing (animated)
   }
 
-  /** Smoothly move towards the button values. `gripTarget` may be overridden while holding. */
-  update(dt, gripTarget, triggerTarget) {
+  /**
+   * Smoothly animate towards the button values.
+   *  grip  -> all fingers + thumb close (fist)
+   *  point -> index stays straight, the other fingers and thumb curl in (pointing pose)
+   */
+  update(dt, gripTarget, pointTarget) {
     const k = 1 - Math.exp(-25 * dt);
     this.grip += (gripTarget - this.grip) * k;
-    this.index += (Math.max(triggerTarget, gripTarget) - this.index) * k;
+    this.point += (pointTarget - this.point) * k;
+
+    const others = Math.max(this.grip, this.point);
+    const index = this.grip * (1 - this.point);
 
     // curl = rotate around Y towards the palm (-X)
     this.fingers.forEach((f, i) => {
-      const c = i === 0 ? this.index : this.grip;
+      const c = i === 0 ? index : others;
       f.knuckle.rotation.y = c * 1.35;
       f.mid.rotation.y = c * 1.5;
     });
-    this.thumb.rotation.set(0.5 - this.grip * 0.3, -0.5 - this.grip * 0.6, 0);
-    this.thumbTip.rotation.y = -0.2 - this.grip * 0.8;
+    // thumb folds across the palm, the same way as the fingers
+    this.thumb.rotation.set(0.5 - others * 0.55, 0.25 + others * 0.75, 0);
+    this.thumbTip.rotation.y = 0.15 + others * 0.9;
   }
 }

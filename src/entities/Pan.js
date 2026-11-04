@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Item } from './Item.js';
+import { Item, box3 } from './Item.js';
 import { mat, COLORS } from '../world/materials.js';
 import { box } from '../world/helpers.js';
 
@@ -34,5 +34,8 @@ export class Pan extends Item {
     box(0.06, 0.014, 0.022, iron, 0.03, 0, 0, handle);
     box(0.15, 0.02, 0.028, mat(0x2a1a10), 0.13, 0, 0, handle);
     this.object3d.add(handle);
+
+    // collision shapes (local): pan body + handle
+    this.collisionBoxes = [box3(0, 0.024, 0, 0.31, 0.048, 0.31), box3(0.25, 0.055, 0, 0.2, 0.03, 0.03)];
   }
 }

@@ -5,11 +5,11 @@ import { buildStove } from './stations/Stove.js';
 import { buildSink } from './stations/Sink.js';
 import { buildPrepCounter } from './stations/PrepCounter.js';
 import { buildServingCounter } from './stations/ServingCounter.js';
-import { faceCenter, mergeStatic } from './helpers.js';
+import { faceCenter, mergeStatic, collectColliders } from './helpers.js';
 import { GRATE_TOP } from '../entities/Burner.js';
 import { Pan, PAN_FLOOR } from '../entities/Pan.js';
 import { Steak } from '../entities/Steak.js';
-import { Tongs } from '../entities/Tongs.js';
+import { Spatula } from '../entities/Spatula.js';
 
 // How far each station's centre is from the player (who stands at the origin).
 const REACH = 0.85;
@@ -50,6 +50,9 @@ export function buildKitchen(scene, game) {
   faceCenter(serving.group, 0, REACH + 0.05);
   root.add(serving.group);
 
+  // solid boxes that held items get pushed out of (read before merging)
+  const colliders = collectColliders(root);
+
   // one draw call per material for everything static; entities stay separate
   scene.add(mergeStatic(root));
 
@@ -69,10 +72,10 @@ export function buildKitchen(scene, game) {
     quat: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.8),
   });
 
-  // tongs hanging from the rail behind the player
-  const tongs = game.add(new Tongs('tongs.0'));
-  const hook = serving.tongsHook;
-  placeInitial(tongs, {
+  // spatula hanging from the rail behind the player
+  const spatula = game.add(new Spatula('spatula.0'));
+  const hook = serving.spatulaHook;
+  placeInitial(spatula, {
     pos: hook.position.clone(),
     quat: hook.quaternion.clone(),
   });
@@ -80,5 +83,5 @@ export function buildKitchen(scene, game) {
 
   buildLighting(scene, room.lamps);
 
-  return { stove, prep, sink, serving };
+  return { stove, prep, sink, serving, colliders };
 }

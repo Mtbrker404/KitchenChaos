@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { M } from '../materials.js';
-import { box, cyl, cabinet } from '../helpers.js';
+import { box, cyl, cabinet, collider } from '../helpers.js';
 
 const W = 1.0;
 const D = 0.65;
@@ -57,6 +57,15 @@ export function buildSink() {
 
   // backsplash
   box(W, 0.4, 0.03, M.cream(), 0, H + 0.2, -D / 2 + 0.015, g);
+
+  // solid parts: cabinet below the basin, the 4 top pieces around the hole, basin walls, backsplash.
+  // Items can go down into the basin (the pot gets filled here in Ring 3).
+  collider(W, H - depth, D, 0, (H - depth) / 2, 0, g);
+  collider(hole.x0 - L, t, F - B, (L + hole.x0) / 2, y, (F + B) / 2, g);
+  collider(R - hole.x1, t, F - B, (R + hole.x1) / 2, y, (F + B) / 2, g);
+  collider(hole.x1 - hole.x0, t, F - hole.z1, 0, y, (F + hole.z1) / 2, g);
+  collider(hole.x1 - hole.x0, t, hole.z0 - B, 0, y, (hole.z0 + B) / 2, g);
+  collider(W, 0.4, 0.03, 0, H + 0.2, -D / 2 + 0.015, g);
 
   return { group: g, topY: H };
 }

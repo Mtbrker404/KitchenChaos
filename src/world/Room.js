@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { COLORS, M } from './materials.js';
-import { box } from './helpers.js';
+import { box, collider } from './helpers.js';
 
 export const ROOM = { size: 9, height: 3.2 };
 
@@ -59,6 +59,13 @@ export function buildRoom() {
   }
   // ceiling
   box(size, 0.1, size, M.ceiling(), 0, height + 0.05, 0, g);
+
+  // solid floor + walls (thick, so fast hand moves can't tunnel through)
+  collider(size + 1, 1, size + 1, 0, -0.5, 0, g);
+  collider(size, height, 1, 0, height / 2, -half - 0.5, g);
+  collider(size, height, 1, 0, height / 2, half + 0.5, g);
+  collider(1, height, size, -half - 0.5, height / 2, 0, g);
+  collider(1, height, size, half + 0.5, height / 2, 0, g);
 
   // Positions for the warm point lights (lamp models removed for now).
   const lamps = [

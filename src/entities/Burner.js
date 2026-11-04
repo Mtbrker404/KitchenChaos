@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Entity } from '../core/Entity.js';
 import { M } from '../world/materials.js';
-import { box, cyl, mergeStatic } from '../world/helpers.js';
+import { box, cyl, mergeStatic, collider } from '../world/helpers.js';
 
 const FLAME_COUNT = 10;
 const flameMat = new THREE.MeshBasicMaterial({
@@ -51,6 +51,7 @@ export class Burner extends Entity {
     for (const [fx, fz] of [[s, s], [-s, s], [s, -s], [-s, -s]]) box(t, GRATE_TOP, t, M.castIron(), fx, GRATE_TOP / 2, fz, g);
 
     this.object3d.add(mergeStatic(g));
+    collider(2 * s + t, GRATE_TOP, 2 * s + t, 0, GRATE_TOP / 2, 0, this.object3d); // pans rest on the grate
 
     // flames: ring of small cones around the head, split into two merged
     // halves that flicker out of sync

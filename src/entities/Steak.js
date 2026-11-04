@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Item } from './Item.js';
+import { Item, box3 } from './Item.js';
 
 // Doneness colour stops: 0 = raw, 1 = cooked, 2 = burnt.
 const RAW = new THREE.Color(0xb8323f);
@@ -45,14 +45,8 @@ export class Steak extends Item {
     mesh.castShadow = mesh.receiveShadow = true;
     this.object3d.add(mesh);
 
-    const fat = new THREE.Mesh(
-      new THREE.BoxGeometry(0.1, 0.018, 0.012),
-      new THREE.MeshStandardMaterial({ color: 0xf1ddc9, roughness: 0.6, flatShading: true }),
-    );
-    fat.position.set(0.0, 0, -0.072);
-    fat.rotation.y = 0.15;
-    fat.castShadow = true;
-    this.object3d.add(fat);
+    // collision shape (local): the steak's footprint
+    this.collisionBoxes = [box3(0, 0, 0, 0.2, 0.022, 0.15)];
   }
 
   /** Lands flat, on whichever side is closer to facing down: this is how flipping works. */
@@ -66,7 +60,8 @@ export class Steak extends Item {
 
   /** Which side is touching the pan: 'A' or 'B'. Used by the cooking logic next. */
   get downSide() {
-    _up.set(0, 1, 0).applyQuaternion(new THREE.Quaternion().fromArray(this.state.quat));
+    // world orientation: state.quat is relative to whatever it rests on (pan, spatula...)
+    _up.set(0, 1, 0).applyQuaternion(this.object3d.getWorldQuaternion(new THREE.Quaternion()));
     return _up.y >= 0 ? 'B' : 'A';
   }
 
